@@ -79,7 +79,7 @@ async def on_message(message: discord.Message):
         await message.add_reaction("❌")  # failure
         response = discord.Embed(
             title=f"Failed to translate \"{message.content}\"",
-            description=f'```No translations found. Make sure you are entering a singular english or latin word."```',
+            description=f'```No translations found. Make sure you are entering a singular english or latin word.```',
         )
     else:
         await message.add_reaction("✅")  # success

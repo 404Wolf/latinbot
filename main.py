@@ -1,44 +1,76 @@
-import asyncio
 import aiohttp
+import asyncio
 import discord
-import json
 from bs4 import BeautifulSoup as bs
+import os
+import logging
+import sys
 
-
-config = json.load(open("config.json"))
+# set up client
 client = discord.Bot()
+
+# set up logger
+logging.basicConfig(
+    level=logging.INFO,
+    filename="logs.txt",
+    format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
+    datefmt="%H:%M:%S",
+)
+logging.getLogger("discord").setLevel(logging.CRITICAL)
+logging.getLogger().addHandler(
+    logging.StreamHandler(sys.stdout)
+)  # log to console + file
 
 
 @client.event
-async def on_ready():
+async def on_ready() -> None:
     """
     Set bot status + announce that bot has booted.
     """
 
-    game = discord.Game("DM me latin!")
-    await client.change_presence(status=discord.Status.online, activity=game)
-    print("Bot has booted")
+    logging.info("LatinBot has booted")
+
+    statuses = (
+        "DM me latin!",
+        "DM me a word!",
+        "Cogito ergo sum!",
+        "Carpe diem!",
+        "Veni, vidi, vici!",
+    )
+    while True:
+        for status in statuses:
+            for emoji in (":scroll:", ":feather:"):
+                status = discord.CustomActivity(
+                    name=status, emoji=discord.PartialEmoji.from_str(emoji)
+                )
+                await client.change_presence(activity=status)
+                await asyncio.sleep(2.5)
 
 
 @client.event
-async def on_message(message: discord.Message):
+async def on_message(message: discord.Message) -> discord.Embed:
     """
     Activate when dmed messages.
     """
 
     # ensure bot doesn't trigger itself
     if message.author == client.user:
+        logging.debug("Message detected, but author is the bot")
         return
 
     # ensure it is a dm message
     if not isinstance(message.channel, discord.channel.DMChannel):
+        logging.debug("Message detected, but it is not in a dm channel")
         return
 
     # make it look like the bot is typing while it gathers responses
     async with message.channel.typing():
+        logging.info(
+            f"{message.author.id} ({message.author.name}#{message.author.discriminator}) is translating {message.content}"
+        )
         translations = [
             "\n```" + translation[1:].replace("\n\n*\n", "").replace("\n*", "") + "```"
-            for translation in await fetch(message.content)
+            for translation in await translate(message.content)
         ]
 
     nullResponses = (
@@ -51,40 +83,79 @@ async def on_message(message: discord.Message):
             if nullResponse in translation.lower():
                 translations[index] = None
 
+    logging.debug(f'Translations fetched: "{translations}"')
+
     # generate a discord embed with the resulting translations
     response = discord.Embed(
         title=f'Translations for "{message.content}"',
-        colour=discord.Colour.blurple(),
+        colour=discord.Colour.dark_green(),
         description="** **",
     )
 
     # append the translation segments to the embed
     if translations[0] is not None:
+        logging.info(f"Latin -> English translations found for {message.content}")
         response.add_field(
             name="Latin -> English:",
             value=translations[0].replace(";\n", ";\n\n"),
             inline=False,
         )
     if translations[1] is not None:
+        logging.info(f"English -> Latin translations found for {message.content}")
         response.add_field(
             name="English -> Latin:", value=translations[1], inline=False
         )
 
     # if no translations were found add an error message
     if translations.count(None) == len(translations):
-        await message.add_reaction("❌")  # failure
+        # if non letter characters are found specify such in error
+        error = "No Translations found. Ensure you are entering a singular english or latin word consisting only of letters."
+        if not message.content.isalpha():
+            error += "\nError: non-letter characters found"
+        else:
+            error += "\nError: word is either in a language other than latin/english, or is gibberish"
+        logging.warning(error)
+
+        asyncio.create_task(message.add_reaction("❌"))  # failure; react with red x
         response = discord.Embed(
             title=f'Failed to translate "{message.content}"',
-            description=f"```No translations found. Make sure you are entering a singular english or latin word.```",
+            colour=discord.Colour.dark_red(),
+            description=f"```{error}```",
         )
     else:
-        await message.add_reaction("✅")  # success
+        logging.debug(
+            f"Successfully translated {message.content} and replied to user ({message.author.id})"
+        )
+        asyncio.create_task(
+            message.add_reaction("✅")
+        )  # success; react with green check
 
     # send response
     await message.reply(embed=response)
 
 
-async def fetch(word: str) -> list:
+async def fetch(endpoint: str, session: aiohttp.ClientSession) -> str:
+    """
+    Fetch html from an endpoint and isolate the contents of the first <pre> tag.
+
+    Args:
+        endpoint (str): endpoint to fetch data for
+        session (aiohttp.ClientSession): aiohttp client session object
+
+    Returns:
+        str: contents between the first <pre> tag
+    """
+
+    logging.debug(f"Fetching data from {endpoint}")
+    async with session.get(endpoint) as resp:
+        resp = await resp.text()
+        resp = bs(resp, "html.parser")
+        resp = resp.find("pre").contents[0]
+        logging.debug(f'Data found for {endpoint}: "{resp}"')
+        return resp
+
+
+async def translate(word: str) -> list:
     """
     Return whitiker words api latin and english translations for a given word
 
@@ -95,23 +166,21 @@ async def fetch(word: str) -> list:
         list: list in the format [latinTranslations, englishTranslations]
     """
 
-    output = []
-    endpoints = (
-        f"https://archives.nd.edu/cgi-bin/wordz.pl?keyword={word}",
-        f"https://archives.nd.edu/cgi-bin/wordz.pl?english={word}",
-    )
-
-    async def parse(html):
-        resp = bs(html, "html.parser")
-        resp = resp.find("pre").contents[0]
-        return resp
-
+    logging.debug(f'Gathering translations for: "{word}"')
     async with aiohttp.ClientSession() as session:
-        for endpoint in endpoints:
-            async with session.get(endpoint) as resp:
-                output.append(await parse(await resp.text()))
+        output = [
+            asyncio.ensure_future(fetch(endpoint, session))
+            for endpoint in (
+                f"https://archives.nd.edu/cgi-bin/wordz.pl?keyword={word}",
+                f"https://archives.nd.edu/cgi-bin/wordz.pl?english={word}",
+            )
+        ]
+        logging.debug(f'Translations found for {word}: "{output}"')
+        output = await asyncio.gather(*output)
 
     return output
 
 
-client.run(config["token"])
+# boot the bot
+logging.debug("Bot is booting")
+client.run(os.environ.get("CONFIG"))

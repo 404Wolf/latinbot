@@ -32,12 +32,16 @@ async def on_message(message: discord.Message):
 
     # ensure it is a dm message
     if not isinstance(message.channel, discord.channel.DMChannel):
-        return    
+        return
 
     # make it look like the bot is typing while it gathers responses
     async with message.channel.typing():
         translations = [
-            "\n```" + translation.replace(";\n", ";\n\n")[1:].replace("\n\n*\n", "") + "```"
+            "\n```"
+            + translation.replace(";\n", ";\n")[1:]
+            .replace("\n\n*\n", "")
+            .replace("\n*", "")
+            + "```"
             for translation in await fetch(message.content)
         ]
 
@@ -72,13 +76,13 @@ async def on_message(message: discord.Message):
 
     # if no translations were found add an error message
     if translations.count(None) == len(translations):
-        await message.add_reaction("❌") # failure
+        await message.add_reaction("❌")  # failure
         response = discord.Embed(
-            title="Error",
-            description=f'```No translations found for "{message.content}"```',
+            title=f"Failed to translate \"{message.content}\"",
+            description=f'```No translations found. Make sure you are entering a singular english or latin word."```',
         )
     else:
-        await message.add_reaction("✅") # success
+        await message.add_reaction("✅")  # success
 
     # send response
     await message.reply(embed=response)

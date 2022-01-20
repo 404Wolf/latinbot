@@ -37,11 +37,7 @@ async def on_message(message: discord.Message):
     # make it look like the bot is typing while it gathers responses
     async with message.channel.typing():
         translations = [
-            "\n```"
-            + translation.replace(";\n", ";\n")[1:]
-            .replace("\n\n*\n", "")
-            .replace("\n*", "")
-            + "```"
+            "\n```" + translation[1:].replace("\n\n*\n", "").replace("\n*", "") + "```"
             for translation in await fetch(message.content)
         ]
 
@@ -66,7 +62,7 @@ async def on_message(message: discord.Message):
     if translations[0] is not None:
         response.add_field(
             name="Latin -> English:",
-            value=translations[0],
+            value=translations[0].replace(";\n", ";\n\n"),
             inline=False,
         )
     if translations[1] is not None:
@@ -78,8 +74,8 @@ async def on_message(message: discord.Message):
     if translations.count(None) == len(translations):
         await message.add_reaction("❌")  # failure
         response = discord.Embed(
-            title=f"Failed to translate \"{message.content}\"",
-            description=f'```No translations found. Make sure you are entering a singular english or latin word.```',
+            title=f'Failed to translate "{message.content}"',
+            description=f"```No translations found. Make sure you are entering a singular english or latin word.```",
         )
     else:
         await message.add_reaction("✅")  # success

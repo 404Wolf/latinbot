@@ -9,4 +9,4 @@ Discord bot to translate Latin vocab
 # [Invite LatinBot!](https://discord.com/api/oauth2/authorize?client_id=933579084443828228&permissions=2112&scope=bot%20applications.commands)
 
 ## Example image:
-![example image](https://media.discordapp.net/attachments/933605032962703364/933614230794543115/unknown.png?width=252&height=603)
+![example image](https://media.discordapp.net/attachments/933605032962703364/933614230794543115/unknown.png)

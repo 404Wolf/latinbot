@@ -7,4 +7,4 @@ To self-host:
 3) Run `main.py`
 
 # [Invite LatinBot!](https://discord.com/api/oauth2/authorize?client_id=933579084443828228&permissions=2112&scope=bot%20applications.commands)
-![example image](https://media.discordapp.net/attachments/933605032962703364/933614230794543115/unknown.png?width=482&height=833)
+![example image](https://media.discordapp.net/attachments/933605032962703364/933614230794543115/unknown.png?width=452&height=803)

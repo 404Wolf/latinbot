@@ -3,7 +3,7 @@ Discord bot to translate Latin vocab
 
 ## To self-host:
 1) Obtain a discord bot token from the [discord developer portal](https://www.discord.dev).
-1) Create a `CONFIG.env` file with the format `TOKEN:<discord-bot-token>` in the same directory.
+1) Create a `.env` file with the format `TOKEN:<discord-bot-token>` in the same directory.
 1) Open terminal and run `pip install -r requirements.txt`.
 1) Run `main.py` by entering `python main.py` or `python3 main.py` depending on your python installation.
 

@@ -5,13 +5,16 @@ from bs4 import BeautifulSoup as bs
 import os
 import logging
 import sys
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # set up client
 client = discord.Bot()
 
 # set up logger
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,
     filename="logs.txt",
     format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
     datefmt="%H:%M:%S",
@@ -39,12 +42,9 @@ async def on_ready() -> None:
     )
     while True:
         for status in statuses:
-            for emoji in (":scroll:", ":feather:"):
-                status = discord.CustomActivity(
-                    name=status, emoji=discord.PartialEmoji.from_str(emoji)
-                )
-                await client.change_presence(activity=status)
-                await asyncio.sleep(2.5)
+            activity = discord.Game(name=status)
+            await client.change_presence(activity=activity)
+            await asyncio.sleep(6.5)
 
 
 @client.event
@@ -66,7 +66,7 @@ async def on_message(message: discord.Message) -> discord.Embed:
     # make it look like the bot is typing while it gathers responses
     async with message.channel.typing():
         logging.info(
-            f"{message.author.id} ({message.author.name}#{message.author.discriminator}) is translating {message.content}"
+            f'{message.author.name}#{message.author.discriminator} [{message.author.id}] is translating "{message.content}"'
         )
         translations = [
             "\n```" + translation[1:].replace("\n\n*\n", "").replace("\n*", "") + "```"
@@ -94,14 +94,14 @@ async def on_message(message: discord.Message) -> discord.Embed:
 
     # append the translation segments to the embed
     if translations[0] is not None:
-        logging.info(f"Latin -> English translations found for {message.content}")
+        logging.info(f'Latin -> English translations found for "{message.content}"')
         response.add_field(
             name="Latin -> English:",
             value=translations[0].replace(";\n", ";\n\n"),
             inline=False,
         )
     if translations[1] is not None:
-        logging.info(f"English -> Latin translations found for {message.content}")
+        logging.info(f'English -> Latin translations found for "{message.content}"')
         response.add_field(
             name="English -> Latin:", value=translations[1], inline=False
         )
@@ -169,7 +169,7 @@ async def translate(word: str) -> list:
     logging.debug(f'Gathering translations for: "{word}"')
     async with aiohttp.ClientSession() as session:
         output = [
-            asyncio.ensure_future(fetch(endpoint, session))
+            asyncio.create_task(fetch(endpoint, session))
             for endpoint in (
                 f"https://archives.nd.edu/cgi-bin/wordz.pl?keyword={word}",
                 f"https://archives.nd.edu/cgi-bin/wordz.pl?english={word}",
@@ -183,4 +183,4 @@ async def translate(word: str) -> list:
 
 # boot the bot
 logging.debug("Bot is booting")
-client.run(os.environ.get("CONFIG"))
+client.run(os.environ.get("TOKEN"))

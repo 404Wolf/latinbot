@@ -32,50 +32,55 @@ async def on_message(message: discord.Message):
 
     # ensure it is a dm message
     if not isinstance(message.channel, discord.channel.DMChannel):
-        return
+        return    
 
-    # ensure messages is only letters
-    if not message.content.isalpha():
-        await message.reply(
-            "Please ensure that only letter characters are used in your message."
-        )
-        return
+    # make it look like the bot is typing while it gathers responses
+    async with message.channel.typing():
+        translations = [
+            "\n```" + translation.replace(";\n", ";\n\n")[1:].replace("\n\n*\n", "") + "```"
+            for translation in await fetch(message.content)
+        ]
 
-    translations = [
-        "\n```" + translation.replace(";\n", ";\n\n")[1:].replace("\n\n*\n","")+"```"
-        for translation in await fetch(message.content)
-    ]
-
-    nullResponses = ("no match", "unknown", "========") # things whitikers responses will contain if no translations are found
+    nullResponses = (
+        "no match",
+        "unknown",
+        "========",
+    )  # things whitikers responses will contain if no translations are found
     for index, translation in enumerate(translations):
         for nullResponse in nullResponses:
-            if nullResponse in translation:
+            if nullResponse in translation.lower():
                 translations[index] = None
-
-    if all([bool(translation) for translation in translations]):
-        await message.reply(
-            f'No latin or english translations found for "{message.content}"'
-        )
-        return
 
     # generate a discord embed with the resulting translations
     response = discord.Embed(
-        title=f"Translations for \"{message.content}\"", colour=discord.Colour.blurple(),
-        description="** **"
+        title=f'Translations for "{message.content}"',
+        colour=discord.Colour.blurple(),
+        description="** **",
     )
 
+    # append the translation segments to the embed
     if translations[0] is not None:
         response.add_field(
             name="Latin -> English:",
             value=translations[0],
             inline=False,
         )
-
     if translations[1] is not None:
         response.add_field(
             name="English -> Latin:", value=translations[1], inline=False
         )
 
+    # if no translations were found add an error message
+    if translations.count(None) == len(translations):
+        await message.add_reaction("❌") # failure
+        response = discord.Embed(
+            title="Error",
+            description=f'```No translations found for "{message.content}"```',
+        )
+    else:
+        await message.add_reaction("✅") # success
+
+    # send response
     await message.reply(embed=response)
 
 

@@ -14,7 +14,7 @@ client = discord.Bot()
 
 # set up logger
 logging.basicConfig(
-    level=logging.WARNING,
+    level=logging.INFO,
     filename="logs.txt",
     format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
     datefmt="%H:%M:%S",

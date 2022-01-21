@@ -6,6 +6,7 @@ import os
 import logging
 import sys
 from dotenv import load_dotenv
+import unidecode
 
 load_dotenv()
 
@@ -53,6 +54,8 @@ async def on_message(message: discord.Message) -> discord.Embed:
     Activate when dmed messages.
     """
 
+    content = unidecode.unidecode(message.content)
+
     # ensure bot doesn't trigger itself
     if message.author == client.user:
         logging.debug("Message detected, but author is the bot")
@@ -70,7 +73,7 @@ async def on_message(message: discord.Message) -> discord.Embed:
         )
         translations = [
             "\n```" + translation[1:].replace("\n\n*\n", "").replace("\n*", "") + "```"
-            for translation in await translate(message.content)
+            for translation in await translate(content)
         ]
 
     nullResponses = (

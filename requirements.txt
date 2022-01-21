@@ -2,3 +2,4 @@ pycord
 python-dotenv
 aiohttp
 bs4
+Unidecode

@@ -80,7 +80,7 @@ async def on_message(message: discord.Message) -> discord.Embed:
     )  # things whitikers responses will contain if no translations are found
     for index, translation in enumerate(translations):
         for nullResponse in nullResponses:
-            if nullResponse in translation.lower():
+            if (nullResponse in translation.lower()) or (len(translation) < 10):
                 translations[index] = None
 
     logging.debug(f'Translations fetched: "{translations}"')
@@ -109,19 +109,13 @@ async def on_message(message: discord.Message) -> discord.Embed:
     # if no translations were found add an error message
     if translations.count(None) == len(translations):
         # if non letter characters are found specify such in error
-        error = "No Translations found. Ensure you are entering a singular english or latin word consisting only of letters."
-        if not message.content.isalpha():
-            error += "\nError: non-letter characters found"
-        else:
-            error += "\nError: word is either in a language other than latin/english, or is gibberish"
-        logging.warning(error)
-
-        asyncio.create_task(message.add_reaction("❌"))  # failure; react with red x
         response = discord.Embed(
             title=f'Failed to translate "{message.content}"',
             colour=discord.Colour.dark_red(),
-            description=f"```{error}```",
+            description=f"```No Translations found. Ensure you are entering a singular english or latin word consisting only of letters.```",
         )
+        logging.warning(f"No translations found for {message.content}")
+        asyncio.create_task(message.add_reaction("❌"))  # failure; react with red x
     else:
         logging.debug(
             f"Successfully translated {message.content} and replied to user ({message.author.id})"
